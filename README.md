@@ -1,71 +1,61 @@
 # NomadBoard Chrome Extension
 
-NomadBoard is a Chrome extension that helps you track your job applications efficiently by integrating with Google Sheets. It automatically captures job details and maintains a comprehensive log of your job search progress.
+A Chrome extension to help job seekers track their job applications with Google Sheets integration.
 
 ## Features
 
-- Google Account Integration
+- Google Account integration
 - Automatic job data capture
-- Status tracking (Wishlist, Applied, Interview, Offer, Rejected)
-- Google Sheets storage
-- Clean and intuitive user interface
-- Real-time updates
-
-## Installation
-
-1. Clone this repository or download the source code
-2. Open Chrome and navigate to `chrome://extensions/`
-3. Enable "Developer mode" in the top right corner
-4. Click "Load unpacked" and select the extension directory
+- Status tracking
+- Google Sheets integration
+- Recent jobs history
 
 ## Setup
 
-1. You'll need to set up a Google Cloud Project and enable the Google Sheets API:
-
-   - Go to the [Google Cloud Console](https://console.cloud.google.com/)
-   - Create a new project
+1. Clone the repository
+2. Copy `src/config/config.template.js` to `src/config/config.js`
+3. Fill in your Google API credentials in `src/config/config.js`:
+   - Get your Client ID from Google Cloud Console
    - Enable the Google Sheets API
-   - Create OAuth 2.0 credentials
-   - Add your extension's ID to the authorized JavaScript origins
-   - Copy your Client ID
-
-2. Update the extension's manifest:
-   - Open `manifest.json`
-   - Replace `${YOUR_CLIENT_ID}` with your actual Google Cloud Client ID
-
-## Usage
-
-1. Click the NomadBoard icon in your Chrome toolbar
-2. Sign in with your Google Account
-3. When viewing a job listing:
-   - Click the NomadBoard icon
-   - Fill in the job details
-   - Select the application status
-   - Click "Save Job"
-4. View your saved jobs in the popup
-5. Access your complete job application history in the automatically created Google Sheet
+   - Configure OAuth consent screen
 
 ## Development
 
-The extension is built with vanilla JavaScript and uses the following structure:
+1. Load the extension in Chrome:
 
-- `manifest.json`: Extension configuration
-- `popup.html`: User interface
-- `popup.js`: Popup functionality
-- `background.js`: Background processes and Google Sheets integration
-- `styles.css`: Styling
+   - Go to chrome://extensions/
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select the extension directory
+
+2. Make changes to the code
+3. Click "Reload" in chrome://extensions/ to see your changes
+
+## Security Notes
+
+- Never commit `config.js` or any files containing real credentials
+- Keep your `.pem` file safe - you'll need it for updates
+- Don't share your API keys or client IDs
+- Use environment variables for local development
+
+## Building
+
+1. Make sure all sensitive data is removed
+2. Go to chrome://extensions/
+3. Click "Pack extension"
+4. Select the extension directory
+5. Keep the generated `.pem` file safe
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+2. Create your feature branch
+3. Make your changes
+4. Submit a pull request
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT
 
 ## Support
 

@@ -1,6 +1,6 @@
 // Google Sheets API configuration
-const SHEET_CONFIG = {
-  NAME: "NomadBoard Job Applications",
+const GOOGLE_CONFIG = {
+  SHEET_NAME: "NomadBoard Job Applications",
   HEADERS: ["Date", "Job Title", "Company", "Status", "URL"],
   MAX_ROWS: 1000,
   COLUMNS: 5,
@@ -14,12 +14,12 @@ const STORAGE_KEYS = {
 };
 
 // Initialize extension
-chrome.runtime.onInstalled.addListener(function () {
+chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.set({ isLoggedIn: false });
 });
 
 // Handle messages from popup
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.action) {
     case "login":
       handleLogin(sendResponse);
@@ -50,7 +50,7 @@ async function handleLogin(sendResponse) {
       return;
     }
 
-    chrome.storage.local.set({
+    await chrome.storage.local.set({
       isLoggedIn: true,
       sheetId: sheetId,
     });
@@ -67,7 +67,7 @@ async function createOrGetSheet(token) {
   try {
     // First, try to find existing sheet
     const response = await fetch(
-      "https://sheets.googleapis.com/v4/spreadsheets?q=title%3D" + encodeURIComponent(SHEET_CONFIG.NAME),
+      "https://sheets.googleapis.com/v4/spreadsheets?q=title%3D" + encodeURIComponent(GOOGLE_CONFIG.SHEET_NAME),
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -89,15 +89,15 @@ async function createOrGetSheet(token) {
       },
       body: JSON.stringify({
         properties: {
-          title: SHEET_CONFIG.NAME,
+          title: GOOGLE_CONFIG.SHEET_NAME,
         },
         sheets: [
           {
             properties: {
               title: "Applications",
               gridProperties: {
-                rowCount: SHEET_CONFIG.MAX_ROWS,
-                columnCount: SHEET_CONFIG.COLUMNS,
+                rowCount: GOOGLE_CONFIG.MAX_ROWS,
+                columnCount: GOOGLE_CONFIG.COLUMNS,
               },
             },
           },
@@ -117,7 +117,7 @@ async function createOrGetSheet(token) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          values: [SHEET_CONFIG.HEADERS],
+          values: [GOOGLE_CONFIG.HEADERS],
         }),
       }
     );
@@ -158,7 +158,9 @@ async function saveJob(jobData, sendResponse) {
     // Store in local storage for recent jobs
     const { recentJobs = [] } = await chrome.storage.local.get(["recentJobs"]);
     recentJobs.unshift(jobData);
-    await chrome.storage.local.set({ recentJobs: recentJobs.slice(0, STORAGE_KEYS.MAX_RECENT_JOBS) });
+    await chrome.storage.local.set({
+      recentJobs: recentJobs.slice(0, 10),
+    });
 
     sendResponse({ success: true });
   } catch (error) {
