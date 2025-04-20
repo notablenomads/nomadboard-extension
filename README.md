@@ -33,10 +33,21 @@ A Chrome extension to help job seekers track their job applications with Google 
 
 ## Security Notes
 
-- Never commit `config.js` or any files containing real credentials
-- Keep your `.pem` file safe - you'll need it for updates
-- Don't share your API keys or client IDs
+- Never commit sensitive files like `config.js` or `.pem` files to the repository
+- Keep your `.pem` file secure and separate from the project
+- The extension key in `manifest.json` should be the public key extracted from your `.pem` file
 - Use environment variables for local development
+- When sharing the extension, each developer should generate their own `.pem` file and extension key
+
+### Extension Key Setup
+
+1. After packing your extension in Chrome, you'll receive a `.pem` file
+2. Store this `.pem` file securely outside your project directory
+3. Run the key extraction script:
+   ```bash
+   node scripts/get-extension-key.js path/to/your/extension.pem
+   ```
+4. Copy the output key and update the `key` field in your `manifest.json`
 
 ## Building
 
