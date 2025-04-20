@@ -1,13 +1,15 @@
 // UI Elements
 const UI_ELEMENTS = {
   LOGIN_SECTION: "login-section",
-  MAIN_SECTION: "main-section",
+  JOB_FORM: "job-form",
+  RECENT_JOBS: "recent-jobs",
   LOGIN_BUTTON: "login-button",
-  SAVE_JOB_BUTTON: "save-job",
+  SAVE_JOB_FORM: "save-job-form",
   JOBS_LIST: "jobs-list",
-  JOB_TITLE: "job-title",
-  COMPANY_NAME: "company-name",
-  JOB_STATUS: "job-status",
+  COMPANY: "company",
+  POSITION: "position",
+  STATUS: "status",
+  NOTES: "notes",
 };
 
 const JOB_STATUS = {
@@ -20,28 +22,29 @@ const JOB_STATUS = {
 
 // Helper functions
 function validateJobData(jobData) {
-  return jobData.title && jobData.company && jobData.status;
+  return jobData.company && jobData.position && jobData.status;
 }
 
 function createJobElement(job) {
   const div = document.createElement("div");
   div.className = "job-item";
 
-  const title = document.createElement("h3");
-  title.textContent = job.title;
-
-  const company = document.createElement("p");
+  const company = document.createElement("h3");
   company.textContent = job.company;
 
+  const position = document.createElement("p");
+  position.textContent = job.position;
+
   const status = document.createElement("span");
-  status.className = `status-badge status-${job.status}`;
-  status.textContent = job.status.charAt(0).toUpperCase() + job.status.slice(1);
+  status.className = `status-badge status-${job.status.toLowerCase()}`;
+  status.textContent = job.status;
 
   const date = document.createElement("p");
+  date.className = "job-date";
   date.textContent = new Date(job.date).toLocaleDateString();
 
-  div.appendChild(title);
   div.appendChild(company);
+  div.appendChild(position);
   div.appendChild(status);
   div.appendChild(date);
 
@@ -49,17 +52,21 @@ function createJobElement(job) {
 }
 
 function showElement(element) {
-  element.classList.remove("hidden");
+  if (element) {
+    element.style.display = "block";
+  }
 }
 
 function hideElement(element) {
-  element.classList.add("hidden");
+  if (element) {
+    element.style.display = "none";
+  }
 }
 
-function clearForm(elements) {
-  elements.jobTitle.value = "";
-  elements.companyName.value = "";
-  elements.jobStatus.selectedIndex = 0;
+function clearForm(form) {
+  if (form) {
+    form.reset();
+  }
 }
 
 // Initialize popup
@@ -67,76 +74,81 @@ document.addEventListener("DOMContentLoaded", function () {
   // Cache DOM elements
   const elements = {
     loginSection: document.getElementById(UI_ELEMENTS.LOGIN_SECTION),
-    mainSection: document.getElementById(UI_ELEMENTS.MAIN_SECTION),
+    jobForm: document.getElementById(UI_ELEMENTS.JOB_FORM),
+    recentJobs: document.getElementById(UI_ELEMENTS.RECENT_JOBS),
     loginButton: document.getElementById(UI_ELEMENTS.LOGIN_BUTTON),
-    saveJobButton: document.getElementById(UI_ELEMENTS.SAVE_JOB_BUTTON),
+    saveJobForm: document.getElementById(UI_ELEMENTS.SAVE_JOB_FORM),
     jobsList: document.getElementById(UI_ELEMENTS.JOBS_LIST),
-    jobTitle: document.getElementById(UI_ELEMENTS.JOB_TITLE),
-    companyName: document.getElementById(UI_ELEMENTS.COMPANY_NAME),
-    jobStatus: document.getElementById(UI_ELEMENTS.JOB_STATUS),
+    company: document.getElementById(UI_ELEMENTS.COMPANY),
+    position: document.getElementById(UI_ELEMENTS.POSITION),
+    status: document.getElementById(UI_ELEMENTS.STATUS),
+    notes: document.getElementById(UI_ELEMENTS.NOTES),
   };
 
   // Check login status
   chrome.storage.local.get(["isLoggedIn"], function (result) {
     if (result.isLoggedIn) {
-      showElement(elements.mainSection);
+      showElement(elements.jobForm);
+      showElement(elements.recentJobs);
       hideElement(elements.loginSection);
       loadRecentJobs();
     } else {
       showElement(elements.loginSection);
-      hideElement(elements.mainSection);
+      hideElement(elements.jobForm);
+      hideElement(elements.recentJobs);
     }
   });
 
   // Handle login
-  elements.loginButton.addEventListener("click", function () {
-    chrome.runtime.sendMessage({ action: "login" }, function (response) {
-      if (response.success) {
-        showElement(elements.mainSection);
-        hideElement(elements.loginSection);
-        loadRecentJobs();
-      }
-    });
-  });
-
-  // Handle job save
-  elements.saveJobButton.addEventListener("click", function () {
-    const jobData = {
-      title: elements.jobTitle.value,
-      company: elements.companyName.value,
-      status: elements.jobStatus.value,
-      url: window.location.href,
-      date: new Date().toISOString(),
-    };
-
-    if (!validateJobData(jobData)) {
-      alert("Please fill in all required fields");
-      return;
-    }
-
-    chrome.runtime.sendMessage(
-      {
-        action: "saveJob",
-        jobData: jobData,
-      },
-      function (response) {
+  if (elements.loginButton) {
+    elements.loginButton.addEventListener("click", function () {
+      chrome.runtime.sendMessage({ action: "login" }, function (response) {
         if (response.success) {
+          showElement(elements.jobForm);
+          showElement(elements.recentJobs);
+          hideElement(elements.loginSection);
           loadRecentJobs();
-          clearForm(elements);
-        } else {
-          alert("Failed to save job. Please try again.");
         }
-      }
-    );
-  });
-
-  function loadRecentJobs() {
-    chrome.runtime.sendMessage({ action: "getRecentJobs" }, function (jobs) {
-      elements.jobsList.innerHTML = "";
-      jobs.forEach((job) => {
-        const jobElement = createJobElement(job);
-        elements.jobsList.appendChild(jobElement);
       });
     });
   }
+
+  // Handle job save
+  if (elements.saveJobForm) {
+    elements.saveJobForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const jobData = {
+        company: elements.company.value,
+        position: elements.position.value,
+        status: elements.status.value,
+        notes: elements.notes.value,
+        date: new Date().toISOString(),
+      };
+
+      if (validateJobData(jobData)) {
+        chrome.runtime.sendMessage({ action: "saveJob", jobData: jobData }, function (response) {
+          if (response.success) {
+            clearForm(elements.saveJobForm);
+            loadRecentJobs();
+          }
+        });
+      }
+    });
+  }
 });
+
+// Load recent jobs
+function loadRecentJobs() {
+  chrome.runtime.sendMessage({ action: "getRecentJobs" }, function (response) {
+    if (response.success && response.jobs) {
+      const jobsList = document.getElementById(UI_ELEMENTS.JOBS_LIST);
+      if (jobsList) {
+        jobsList.innerHTML = "";
+        response.jobs.forEach((job) => {
+          jobsList.appendChild(createJobElement(job));
+        });
+      }
+    }
+  });
+}
