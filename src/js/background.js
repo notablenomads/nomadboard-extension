@@ -1,14 +1,25 @@
-import { storageService } from "../services/storageService.js";
-import { sheetsService } from "../services/sheetsService.js";
-import { STORAGE_KEYS } from "./constants.js";
+// Google Sheets API configuration
+const SHEET_CONFIG = {
+  NAME: "NomadBoard Job Applications",
+  HEADERS: ["Date", "Job Title", "Company", "Status", "URL"],
+  MAX_ROWS: 1000,
+  COLUMNS: 5,
+};
+
+const STORAGE_KEYS = {
+  IS_LOGGED_IN: "isLoggedIn",
+  SHEET_ID: "sheetId",
+  RECENT_JOBS: "recentJobs",
+  MAX_RECENT_JOBS: 10,
+};
 
 // Initialize extension
-chrome.runtime.onInstalled.addListener(() => {
-  storageService.setLoginStatus(false);
+chrome.runtime.onInstalled.addListener(function () {
+  chrome.storage.local.set({ isLoggedIn: false });
 });
 
 // Handle messages from popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   switch (request.action) {
     case "login":
       handleLogin(sendResponse);
@@ -23,6 +34,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true; // Keep the message channel open for async responses
 });
 
+// Handle Google OAuth login
 async function handleLogin(sendResponse) {
   try {
     const token = await chrome.identity.getAuthToken({ interactive: true });
@@ -31,17 +43,16 @@ async function handleLogin(sendResponse) {
       return;
     }
 
-    await sheetsService.initialize(token);
-    const sheetId = await sheetsService.createOrGetSheet();
-
+    // Create or get the Google Sheet
+    const sheetId = await createOrGetSheet(token);
     if (!sheetId) {
       sendResponse({ success: false });
       return;
     }
 
-    await storageService.setMultiple({
-      [STORAGE_KEYS.IS_LOGGED_IN]: true,
-      [STORAGE_KEYS.SHEET_ID]: sheetId,
+    chrome.storage.local.set({
+      isLoggedIn: true,
+      sheetId: sheetId,
     });
 
     sendResponse({ success: true });
@@ -51,9 +62,77 @@ async function handleLogin(sendResponse) {
   }
 }
 
+// Create or get the Google Sheet
+async function createOrGetSheet(token) {
+  try {
+    // First, try to find existing sheet
+    const response = await fetch(
+      "https://sheets.googleapis.com/v4/spreadsheets?q=title%3D" + encodeURIComponent(SHEET_CONFIG.NAME),
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    const data = await response.json();
+
+    if (data.files && data.files.length > 0) {
+      return data.files[0].id;
+    }
+
+    // Create new sheet if none exists
+    const createResponse = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        properties: {
+          title: SHEET_CONFIG.NAME,
+        },
+        sheets: [
+          {
+            properties: {
+              title: "Applications",
+              gridProperties: {
+                rowCount: SHEET_CONFIG.MAX_ROWS,
+                columnCount: SHEET_CONFIG.COLUMNS,
+              },
+            },
+          },
+        ],
+      }),
+    });
+
+    const createData = await createResponse.json();
+
+    // Add headers
+    await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${createData.spreadsheetId}/values/A1:E1?valueInputOption=RAW`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          values: [SHEET_CONFIG.HEADERS],
+        }),
+      }
+    );
+
+    return createData.spreadsheetId;
+  } catch (error) {
+    console.error("Sheet creation error:", error);
+    return null;
+  }
+}
+
+// Save job to Google Sheet
 async function saveJob(jobData, sendResponse) {
   try {
-    const sheetId = await storageService.getSheetId();
+    const { sheetId } = await chrome.storage.local.get(["sheetId"]);
     const token = await chrome.identity.getAuthToken({ interactive: false });
 
     if (!sheetId || !token) {
@@ -61,9 +140,25 @@ async function saveJob(jobData, sendResponse) {
       return;
     }
 
-    await sheetsService.initialize(token);
-    await sheetsService.appendJob(sheetId, jobData);
-    await storageService.addRecentJob(jobData);
+    const values = [
+      [new Date(jobData.date).toLocaleDateString(), jobData.title, jobData.company, jobData.status, jobData.url],
+    ];
+
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A:E:append?valueInputOption=RAW`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        values: values,
+      }),
+    });
+
+    // Store in local storage for recent jobs
+    const { recentJobs = [] } = await chrome.storage.local.get(["recentJobs"]);
+    recentJobs.unshift(jobData);
+    await chrome.storage.local.set({ recentJobs: recentJobs.slice(0, STORAGE_KEYS.MAX_RECENT_JOBS) });
 
     sendResponse({ success: true });
   } catch (error) {
@@ -72,10 +167,11 @@ async function saveJob(jobData, sendResponse) {
   }
 }
 
+// Get recent jobs from local storage
 async function getRecentJobs(sendResponse) {
   try {
-    const jobs = await storageService.getRecentJobs();
-    sendResponse(jobs);
+    const { recentJobs = [] } = await chrome.storage.local.get(["recentJobs"]);
+    sendResponse(recentJobs);
   } catch (error) {
     console.error("Get recent jobs error:", error);
     sendResponse([]);

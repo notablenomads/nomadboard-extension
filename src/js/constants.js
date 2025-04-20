@@ -6,11 +6,11 @@ export const SHEET_CONFIG = {
 };
 
 export const JOB_STATUS = {
-  WISHLIST: "wishlist",
   APPLIED: "applied",
-  INTERVIEW: "interview",
+  INTERVIEWING: "interviewing",
   OFFER: "offer",
   REJECTED: "rejected",
+  ACCEPTED: "accepted",
 };
 
 export const STORAGE_KEYS = {

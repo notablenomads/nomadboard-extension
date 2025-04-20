@@ -7,8 +7,7 @@ export function capitalizeFirstLetter(string) {
 }
 
 export function validateJobData(jobData) {
-  const requiredFields = ["title", "company"];
-  return requiredFields.every((field) => jobData[field] && jobData[field].trim());
+  return jobData.title && jobData.company && jobData.status;
 }
 
 export function createJobElement(job) {
@@ -23,10 +22,10 @@ export function createJobElement(job) {
 
   const status = document.createElement("span");
   status.className = `status-badge status-${job.status}`;
-  status.textContent = capitalizeFirstLetter(job.status);
+  status.textContent = job.status.charAt(0).toUpperCase() + job.status.slice(1);
 
   const date = document.createElement("p");
-  date.textContent = formatDate(job.date);
+  date.textContent = new Date(job.date).toLocaleDateString();
 
   div.appendChild(title);
   div.appendChild(company);
@@ -44,12 +43,8 @@ export function hideElement(element) {
   element.classList.add("hidden");
 }
 
-export function clearForm(formElements) {
-  Object.values(formElements).forEach((element) => {
-    if (element.tagName === "SELECT") {
-      element.selectedIndex = 0;
-    } else {
-      element.value = "";
-    }
-  });
+export function clearForm(elements) {
+  elements.jobTitle.value = "";
+  elements.companyName.value = "";
+  elements.jobStatus.selectedIndex = 0;
 }
