@@ -35,6 +35,7 @@ export default defineConfig({
       input: {
         popup: "src/popup/popup.html",
         background: "src/js/background.js",
+        contentScript: "src/js/contentScript.js",
       },
       output: {
         entryFileNames: `assets/[name].js`,

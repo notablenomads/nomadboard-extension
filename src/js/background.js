@@ -251,7 +251,7 @@ chrome.runtime.onInstalled.addListener(() => {
   storageService.setLoginStatus(false);
 });
 
-// Handle messages from popup
+// Handle messages from popup and content script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.action) {
     case "login":
@@ -262,6 +262,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       break;
     case "getRecentJobs":
       getRecentJobs(sendResponse);
+      break;
+    case "jobDetailsExtracted":
+      handleExtractedJobDetails(request.jobData);
       break;
   }
   return true; // Keep the message channel open for async responses
@@ -359,5 +362,39 @@ async function getRecentJobs(sendResponse) {
   } catch (error) {
     console.error("Get recent jobs error:", error);
     sendResponse({ success: false, error: error.message });
+  }
+}
+
+/**
+ * Handles extracted job details from LinkedIn
+ * @param {Object} jobData - The extracted job data
+ */
+async function handleExtractedJobDetails(jobData) {
+  if (!jobData) return;
+
+  try {
+    const isLoggedIn = await storageService.getLoginStatus();
+    if (!isLoggedIn) {
+      console.log("User not logged in, job details will be saved when logged in");
+      return;
+    }
+
+    const sheetId = await storageService.getSheetId();
+    if (!sheetId) {
+      console.log("No sheet ID found, job details will be saved when sheet is created");
+      return;
+    }
+
+    const token = await getAuthToken();
+    if (!token) {
+      console.log("Not authenticated, job details will be saved when authenticated");
+      return;
+    }
+
+    await sheetsService.appendJobData(token, sheetId, jobData);
+    await storageService.updateRecentJobs(jobData);
+    console.log("LinkedIn job saved successfully");
+  } catch (error) {
+    console.error("Error saving LinkedIn job:", error);
   }
 }

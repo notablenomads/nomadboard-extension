@@ -18,6 +18,7 @@ interface JobData {
 export function Popup() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [recentJobs, setRecentJobs] = useState<JobData[]>([]);
+  const [isLinkedInJobPage, setIsLinkedInJobPage] = useState(false);
   const [formData, setFormData] = useState<JobData>({
     company: "",
     position: "",
@@ -27,6 +28,14 @@ export function Popup() {
   });
 
   useEffect(() => {
+    // Check if we're on a LinkedIn job page
+    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+      const currentTab = tabs[0];
+      if (currentTab?.url?.includes("linkedin.com/jobs/")) {
+        setIsLinkedInJobPage(true);
+      }
+    });
+
     chrome.storage.local.get(["isLoggedIn"], (result) => {
       setIsLoggedIn(result.isLoggedIn);
       if (result.isLoggedIn) {
@@ -50,6 +59,60 @@ export function Popup() {
         setRecentJobs(response.jobs);
       }
     });
+  };
+
+  const handleExtractLinkedInJob = async () => {
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab?.id) {
+        console.error("No active tab found");
+        return;
+      }
+
+      // Check if we're on a LinkedIn job page
+      if (!tab.url?.includes("linkedin.com/jobs/")) {
+        console.error("Not on a LinkedIn job page");
+        return;
+      }
+
+      try {
+        const response = await chrome.tabs.sendMessage(tab.id, { action: "extractJobDetails" });
+        if (response?.success && response?.jobData) {
+          setFormData({
+            ...formData,
+            company: response.jobData.company,
+            position: response.jobData.position,
+            notes: response.jobData.description || "",
+          });
+        } else {
+          console.error("Failed to extract job details:", response?.error);
+        }
+      } catch (error) {
+        // If the content script isn't loaded yet, try to inject it
+        if (error.message.includes("Receiving end does not exist")) {
+          console.log("Content script not loaded, attempting to inject...");
+          await chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            files: ["dist/assets/contentScript.js"],
+          });
+
+          // Try the extraction again after injecting the script
+          const response = await chrome.tabs.sendMessage(tab.id, { action: "extractJobDetails" });
+          if (response?.success && response?.jobData) {
+            setFormData({
+              ...formData,
+              company: response.jobData.company,
+              position: response.jobData.position,
+              notes: response.jobData.description || "",
+            });
+          }
+        } else {
+          console.error("Error extracting LinkedIn job:", error);
+        }
+      }
+    } catch (error) {
+      console.error("Error in handleExtractLinkedInJob:", error);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -79,7 +142,11 @@ export function Popup() {
 
       {!isLoggedIn ? (
         <Card>
-          <CardContent className="pt-6">
+          <CardHeader>
+            <CardTitle>Welcome to NomadBoard</CardTitle>
+            <CardDescription>Please login to continue</CardDescription>
+          </CardHeader>
+          <CardContent>
             <Button onClick={handleLogin} className="w-full">
               Login with Google
             </Button>
@@ -87,6 +154,20 @@ export function Popup() {
         </Card>
       ) : (
         <>
+          {isLinkedInJobPage && (
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>LinkedIn Job Detected</CardTitle>
+                <CardDescription>Extract job details from LinkedIn</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={handleExtractLinkedInJob} className="w-full">
+                  Extract Job Details
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="mb-4">
             <CardHeader>
               <CardTitle>Add New Job</CardTitle>
