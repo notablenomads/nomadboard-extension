@@ -104,80 +104,139 @@ const getAuthToken = () => {
 const sheetsService = {
   async createOrGetSheet(token) {
     try {
+      console.log("Starting createOrGetSheet process...");
       console.log("Searching for existing sheet...");
       const sheetId = await this.findExistingSheet(token);
       if (sheetId) {
+        console.log("Found existing sheet with ID:", sheetId);
+        await storageService.setSheetId(sheetId);
         return sheetId;
       }
 
-      return await this.createNewSheet(token);
+      console.log("No existing sheet found, proceeding to create new sheet...");
+      const newSheetId = await this.createNewSheet(token);
+      console.log("New sheet created with ID:", newSheetId);
+      return newSheetId;
     } catch (error) {
       console.error("Sheet creation error:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        token: token ? "Token exists" : "No token",
+      });
       return null;
     }
   },
 
   async findExistingSheet(token) {
-    const searchResponse = await fetch(
-      `${API_CONFIG.DRIVE_URL}/files?q=name%3D'${encodeURIComponent(
-        GOOGLE_CONFIG.SHEET_NAME
-      )}'%20and%20mimeType%3D'application/vnd.google-apps.spreadsheet'`,
-      {
-        headers: createHeaders(token),
+    try {
+      console.log("Searching for sheet with name:", GOOGLE_CONFIG.SHEET_NAME);
+      const searchResponse = await fetch(
+        `${API_CONFIG.DRIVE_URL}/files?q=name%3D'${encodeURIComponent(
+          GOOGLE_CONFIG.SHEET_NAME
+        )}'%20and%20mimeType%3D'application/vnd.google-apps.spreadsheet'`,
+        {
+          headers: createHeaders(token),
+        }
+      );
+
+      if (!searchResponse.ok) {
+        const errorText = await searchResponse.text();
+        console.error("Search sheet error response:", {
+          status: searchResponse.status,
+          statusText: searchResponse.statusText,
+          errorText,
+        });
+        await handleApiError(searchResponse, "Search sheet");
       }
-    );
 
-    if (!searchResponse.ok) {
-      await handleApiError(searchResponse, "Search sheet");
+      const searchData = await searchResponse.json();
+      console.log("Search response data:", searchData);
+
+      if (searchData.files && searchData.files.length > 0) {
+        console.log("Found existing sheet:", searchData.files[0].id);
+        return searchData.files[0].id;
+      }
+
+      console.log("No existing sheet found");
+      return null;
+    } catch (error) {
+      console.error("Error in findExistingSheet:", error);
+      throw error;
     }
-
-    const searchData = await searchResponse.json();
-    console.log("Search response:", searchData);
-
-    if (searchData.files && searchData.files.length > 0) {
-      console.log("Found existing sheet:", searchData.files[0].id);
-      return searchData.files[0].id;
-    }
-
-    return null;
   },
 
   async createNewSheet(token) {
-    console.log("No existing sheet found, creating new one...");
-    const createResponse = await fetch(`${API_CONFIG.BASE_URL}/spreadsheets`, {
-      method: "POST",
-      headers: createHeaders(token),
-      body: JSON.stringify({
-        properties: {
-          title: GOOGLE_CONFIG.SHEET_NAME,
-        },
-        sheets: [
-          {
-            properties: {
-              title: "Applications",
-              gridProperties: {
-                rowCount: GOOGLE_CONFIG.MAX_ROWS,
-                columnCount: GOOGLE_CONFIG.COLUMNS,
+    try {
+      console.log("Starting new sheet creation...");
+      const createResponse = await fetch(`${API_CONFIG.BASE_URL}/spreadsheets`, {
+        method: "POST",
+        headers: createHeaders(token),
+        body: JSON.stringify({
+          properties: {
+            title: GOOGLE_CONFIG.SHEET_NAME,
+          },
+          sheets: [
+            {
+              properties: {
+                title: "Applications",
+                gridProperties: {
+                  rowCount: GOOGLE_CONFIG.MAX_ROWS,
+                  columnCount: GOOGLE_CONFIG.COLUMNS,
+                },
               },
             },
-          },
-        ],
-      }),
-    });
+          ],
+        }),
+      });
 
-    if (!createResponse.ok) {
-      await handleApiError(createResponse, "Create sheet");
+      if (!createResponse.ok) {
+        const errorText = await createResponse.text();
+        console.error("Create sheet error response:", {
+          status: createResponse.status,
+          statusText: createResponse.statusText,
+          errorText,
+        });
+        await handleApiError(createResponse, "Create sheet");
+      }
+
+      const createData = await createResponse.json();
+      console.log("Create response data:", createData);
+
+      if (!createData.spreadsheetId) {
+        throw new Error("No spreadsheet ID in response");
+      }
+
+      // Store the sheet ID immediately after creation
+      await storageService.setSheetId(createData.spreadsheetId);
+      console.log("Sheet ID stored in local storage:", createData.spreadsheetId);
+
+      // Verify sheet access
+      const verifyResponse = await fetch(`${API_CONFIG.BASE_URL}/spreadsheets/${createData.spreadsheetId}`, {
+        headers: createHeaders(token),
+      });
+
+      if (!verifyResponse.ok) {
+        const errorText = await verifyResponse.text();
+        console.error("Sheet verification error:", {
+          status: verifyResponse.status,
+          statusText: verifyResponse.statusText,
+          errorText,
+        });
+        throw new Error("Failed to verify sheet access");
+      }
+
+      console.log("Adding headers to new sheet...");
+      await this.addHeaders(token, createData.spreadsheetId);
+      console.log("Headers added successfully");
+
+      return createData.spreadsheetId;
+    } catch (error) {
+      console.error("Error in createNewSheet:", error);
+      // Clear the sheet ID if there was an error
+      await storageService.setSheetId(null);
+      throw error;
     }
-
-    const createData = await createResponse.json();
-    console.log("Create response:", createData);
-
-    if (!createData.spreadsheetId) {
-      throw new Error("No spreadsheet ID in response");
-    }
-
-    await this.addHeaders(token, createData.spreadsheetId);
-    return createData.spreadsheetId;
   },
 
   async addHeaders(token, sheetId) {
@@ -201,41 +260,69 @@ const sheetsService = {
   },
 
   async appendJobData(token, sheetId, jobData) {
-    // Ensure all fields are in the correct order
-    const values = [
-      [
-        new Date().toISOString(), // Date
-        jobData.position || "", // Job Title
-        jobData.company || "", // Company
-        jobData.status || "", // Status
-        jobData.location || "", // Location
-        jobData.jobType || "", // Job Type
-        jobData.postedDate || "", // Posted Date
-        jobData.companySize || "", // Company Size
-        jobData.companyIndustry || "", // Company Industry
-        jobData.salaryInfo || "", // Salary Info
-        jobData.url || "", // URL
-        jobData.notes || "", // Notes
-      ],
-    ];
-
-    console.log("Adding job data to sheet:", values);
-
-    const appendResponse = await fetch(
-      `${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}/values/A:L:append?valueInputOption=${API_CONFIG.VALUE_INPUT_OPTION}&insertDataOption=${API_CONFIG.INSERT_DATA_OPTION}`,
-      {
-        method: "POST",
+    try {
+      // Verify sheet access before appending
+      const verifyResponse = await fetch(`${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}`, {
         headers: createHeaders(token),
-        body: JSON.stringify({
-          range: "A:L",
-          majorDimension: "ROWS",
-          values: values,
-        }),
-      }
-    );
+      });
 
-    if (!appendResponse.ok) {
-      await handleApiError(appendResponse, "Append data");
+      if (!verifyResponse.ok) {
+        const errorText = await verifyResponse.text();
+        console.error("Sheet verification error before append:", {
+          status: verifyResponse.status,
+          statusText: verifyResponse.statusText,
+          errorText,
+        });
+        throw new Error("Failed to verify sheet access before appending data");
+      }
+
+      // Ensure all fields are in the correct order
+      const values = [
+        [
+          new Date().toISOString(), // Date
+          jobData.position || "", // Job Title
+          jobData.company || "", // Company
+          jobData.status || "", // Status
+          jobData.location || "", // Location
+          jobData.jobType || "", // Job Type
+          jobData.postedDate || "", // Posted Date
+          jobData.companySize || "", // Company Size
+          jobData.companyIndustry || "", // Company Industry
+          jobData.salaryInfo || "", // Salary Info
+          jobData.url || "", // URL
+          jobData.notes || "", // Notes
+        ],
+      ];
+
+      console.log("Adding job data to sheet:", values);
+
+      const appendResponse = await fetch(
+        `${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}/values/A:L:append?valueInputOption=${API_CONFIG.VALUE_INPUT_OPTION}&insertDataOption=${API_CONFIG.INSERT_DATA_OPTION}`,
+        {
+          method: "POST",
+          headers: createHeaders(token),
+          body: JSON.stringify({
+            range: "A:L",
+            majorDimension: "ROWS",
+            values: values,
+          }),
+        }
+      );
+
+      if (!appendResponse.ok) {
+        const errorText = await appendResponse.text();
+        console.error("Append data error response:", {
+          status: appendResponse.status,
+          statusText: appendResponse.statusText,
+          errorText,
+        });
+        await handleApiError(appendResponse, "Append data");
+      }
+
+      console.log("Job data appended successfully");
+    } catch (error) {
+      console.error("Error in appendJobData:", error);
+      throw error;
     }
   },
 };
@@ -309,6 +396,11 @@ async function handleLogin(sendResponse) {
   try {
     console.log("Starting login process...");
 
+    // Clear any existing sheet ID and login status
+    await storageService.setSheetId(null);
+    await storageService.setLoginStatus(false);
+    console.log("Cleared existing sheet ID and login status");
+
     // Get the auth token
     token = await new Promise((resolve, reject) => {
       chrome.identity.getAuthToken(
@@ -318,8 +410,10 @@ async function handleLogin(sendResponse) {
         },
         (token) => {
           if (chrome.runtime.lastError) {
+            console.error("Auth token error:", chrome.runtime.lastError);
             reject(new Error(chrome.runtime.lastError.message));
           } else {
+            console.log("Auth token received successfully");
             resolve(token);
           }
         }
@@ -340,13 +434,34 @@ async function handleLogin(sendResponse) {
     }
 
     console.log("Sheet created/retrieved successfully:", sheetId);
+
+    // Verify the sheet ID is stored
+    const storedSheetId = await storageService.getSheetId();
+    console.log("Stored sheet ID:", storedSheetId);
+
+    if (!storedSheetId) {
+      throw new Error("Sheet ID not stored properly");
+    }
+
+    if (storedSheetId !== sheetId) {
+      console.error("Sheet ID mismatch:", { stored: storedSheetId, created: sheetId });
+      throw new Error("Sheet ID storage verification failed");
+    }
+
     await storageService.setLoginStatus(true);
-    await storageService.setSheetId(sheetId);
+    console.log("Login status set to true");
 
     sendResponse({ success: true });
   } catch (error) {
     console.error("Login error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      token: token ? "Token exists" : "No token",
+    });
     await clearToken(token);
+    await storageService.setLoginStatus(false);
+    await storageService.setSheetId(null);
     sendResponse({ success: false, error: error.message });
   }
 }
