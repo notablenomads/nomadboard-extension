@@ -37,9 +37,22 @@ const API_CONFIG = {
 // Define the Google Sheets configuration
 const GOOGLE_CONFIG = {
   SHEET_NAME: "NomadBoard Job Applications",
-  HEADERS: ["Date", "Job Title", "Company", "Status", "URL"],
+  HEADERS: [
+    "Date",
+    "Job Title",
+    "Company",
+    "Status",
+    "Location",
+    "Job Type",
+    "Posted Date",
+    "Company Size",
+    "Company Industry",
+    "Salary Info",
+    "URL",
+    "Notes",
+  ],
   MAX_ROWS: 1000,
-  COLUMNS: 5,
+  COLUMNS: 12,
 };
 
 // Define storage keys
@@ -170,12 +183,12 @@ const sheetsService = {
   async addHeaders(token, sheetId) {
     console.log("Adding headers to new sheet...");
     const headerResponse = await fetch(
-      `${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}/values/A1:E1?valueInputOption=${API_CONFIG.VALUE_INPUT_OPTION}`,
+      `${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}/values/A1:L1?valueInputOption=${API_CONFIG.VALUE_INPUT_OPTION}`,
       {
         method: "PUT",
         headers: createHeaders(token),
         body: JSON.stringify({
-          range: "A1:E1",
+          range: "A1:L1",
           majorDimension: "ROWS",
           values: [GOOGLE_CONFIG.HEADERS],
         }),
@@ -188,16 +201,33 @@ const sheetsService = {
   },
 
   async appendJobData(token, sheetId, jobData) {
-    const values = [[new Date().toISOString(), jobData.position, jobData.company, jobData.status, jobData.notes || ""]];
-    console.log("Adding job data:", values);
+    // Ensure all fields are in the correct order
+    const values = [
+      [
+        new Date().toISOString(), // Date
+        jobData.position || "", // Job Title
+        jobData.company || "", // Company
+        jobData.status || "", // Status
+        jobData.location || "", // Location
+        jobData.jobType || "", // Job Type
+        jobData.postedDate || "", // Posted Date
+        jobData.companySize || "", // Company Size
+        jobData.companyIndustry || "", // Company Industry
+        jobData.salaryInfo || "", // Salary Info
+        jobData.url || "", // URL
+        jobData.notes || "", // Notes
+      ],
+    ];
+
+    console.log("Adding job data to sheet:", values);
 
     const appendResponse = await fetch(
-      `${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}/values/A:E:append?valueInputOption=${API_CONFIG.VALUE_INPUT_OPTION}&insertDataOption=${API_CONFIG.INSERT_DATA_OPTION}`,
+      `${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}/values/A:L:append?valueInputOption=${API_CONFIG.VALUE_INPUT_OPTION}&insertDataOption=${API_CONFIG.INSERT_DATA_OPTION}`,
       {
         method: "POST",
         headers: createHeaders(token),
         body: JSON.stringify({
-          range: "A:E",
+          range: "A:L",
           majorDimension: "ROWS",
           values: values,
         }),

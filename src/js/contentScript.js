@@ -1,21 +1,59 @@
 // Function to extract job details from LinkedIn
 function extractJobDetails() {
   try {
-    // Wait for the job details to load
+    // Basic job information
     const jobTitle = document.querySelector(".job-details-jobs-unified-top-card__job-title")?.textContent?.trim();
     const companyName = document.querySelector(".job-details-jobs-unified-top-card__company-name")?.textContent?.trim();
     const jobDescription = document.querySelector(".job-details-jobs-unified-description__content")?.textContent?.trim();
     const jobUrl = window.location.href;
 
+    // Additional job details
+    const location =
+      document.querySelector(".tvm__text.tvm__text--low-emphasis")?.textContent?.trim() ||
+      document.querySelector(".job-details-jobs-unified-top-card__bullet")?.textContent?.trim();
+    const jobType = document.querySelector(".job-details-jobs-unified-top-card__job-insight")?.textContent?.trim();
+    const postedDate = document.querySelector(".job-details-jobs-unified-top-card__subtitle-secondary")?.textContent?.trim();
+
+    // Company details
+    const companySize = document.querySelector(".job-details-jobs-unified-top-card__company-size")?.textContent?.trim();
+    const companyIndustry = document
+      .querySelector(".job-details-jobs-unified-top-card__company-industry")
+      ?.textContent?.trim();
+
+    // Salary information (if available)
+    const salaryInfo = document.querySelector(".job-details-jobs-unified-top-card__salary-info")?.textContent?.trim();
+
     if (jobTitle && companyName) {
-      return {
+      const jobData = {
         position: jobTitle,
         company: companyName,
         description: jobDescription,
         url: jobUrl,
         source: "LinkedIn",
         date: new Date().toISOString(),
+        // Additional fields
+        location: location || "",
+        jobType: jobType || "",
+        postedDate: postedDate || "",
+        companySize: companySize || "",
+        companyIndustry: companyIndustry || "",
+        salaryInfo: salaryInfo || "",
+        // Raw data for debugging
+        rawData: {
+          title: jobTitle,
+          company: companyName,
+          description: jobDescription,
+          location,
+          jobType,
+          postedDate,
+          companySize,
+          companyIndustry,
+          salaryInfo,
+        },
       };
+
+      console.log("Extracted job data:", jobData);
+      return jobData;
     }
     return null;
   } catch (error) {

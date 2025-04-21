@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
 interface JobData {
   company: string;
@@ -13,6 +14,14 @@ interface JobData {
   status: string;
   notes?: string;
   date: string;
+  location?: string;
+  jobType?: string;
+  postedDate?: string;
+  companySize?: string;
+  companyIndustry?: string;
+  salaryInfo?: string;
+  url?: string;
+  description?: string;
 }
 
 export function Popup() {
@@ -83,6 +92,14 @@ export function Popup() {
             company: response.jobData.company,
             position: response.jobData.position,
             notes: response.jobData.description || "",
+            location: response.jobData.location,
+            jobType: response.jobData.jobType,
+            postedDate: response.jobData.postedDate,
+            companySize: response.jobData.companySize,
+            companyIndustry: response.jobData.companyIndustry,
+            salaryInfo: response.jobData.salaryInfo,
+            url: response.jobData.url,
+            description: response.jobData.description,
           });
         } else {
           console.error("Failed to extract job details:", response?.error);
@@ -104,6 +121,14 @@ export function Popup() {
               company: response.jobData.company,
               position: response.jobData.position,
               notes: response.jobData.description || "",
+              location: response.jobData.location,
+              jobType: response.jobData.jobType,
+              postedDate: response.jobData.postedDate,
+              companySize: response.jobData.companySize,
+              companyIndustry: response.jobData.companyIndustry,
+              salaryInfo: response.jobData.salaryInfo,
+              url: response.jobData.url,
+              description: response.jobData.description,
             });
           }
         } else {
@@ -193,6 +218,22 @@ export function Popup() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    value={formData.location || ""}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="jobType">Job Type</Label>
+                  <Input
+                    id="jobType"
+                    value={formData.jobType || ""}
+                    onChange={(e) => setFormData({ ...formData, jobType: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
                   <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
                     <SelectTrigger>
@@ -238,6 +279,12 @@ export function Popup() {
                             <div>
                               <h3 className="font-semibold">{job.company}</h3>
                               <p className="text-sm text-muted-foreground">{job.position}</p>
+                              {job.location && <p className="text-sm text-muted-foreground">{job.location}</p>}
+                              {job.jobType && (
+                                <Badge variant="outline" className="mt-1">
+                                  {job.jobType}
+                                </Badge>
+                              )}
                             </div>
                             <div
                               className={`px-2 py-1 rounded-full text-xs font-medium ${
