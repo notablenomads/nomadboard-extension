@@ -10,140 +10,37 @@ function extractJobDetails() {
     const jobUrl = window.location.href;
     console.log("Job URL:", jobUrl);
 
-    // Additional job details
-    // Try multiple selectors for location
-    const locationSelectors = [
-      ".tvm__text.tvm__text--low-emphasis",
-      ".job-details-jobs-unified-top-card__bullet",
-      ".job-details-jobs-unified-top-card__primary-description",
-      ".job-details-jobs-unified-top-card__subtitle-secondary",
-      ".job-details-jobs-unified-top-card__job-insight",
-      ".job-details-jobs-unified-top-card__job-insight-container",
-      // Try more specific selectors
-      "span[class*='location']",
-      "div[class*='location']",
-      "span[class*='job-location']",
-      "div[class*='job-location']",
-      // Try to find the location in the job card
-      ".job-card-container__metadata-item",
-      ".job-card-container__primary-description",
-      ".job-card-container__location",
-      // Try to find the location in the job details
-      ".job-details-jobs-unified-top-card__job-insight-container .job-details-jobs-unified-top-card__job-insight",
-      ".job-details-jobs-unified-top-card__job-insight-container .job-details-jobs-unified-top-card__bullet",
-    ];
-
+    // Extract location from the job details section
     let location = "";
-    for (const selector of locationSelectors) {
-      const element = document.querySelector(selector);
-      if (element) {
-        // Clean the text content by removing HTML comments and extra whitespace
-        const text = element.textContent
-          .replace(/<!---->/g, "") // Remove HTML comments
-          .replace(/\s+/g, " ") // Replace multiple spaces with single space
-          .trim();
-
-        console.log(`Found location with selector ${selector}:`, text);
-
-        // Skip if the text contains placeholder or search-related content
-        if (
-          text &&
-          !text.includes("Posted") &&
-          !text.includes("Full-time") &&
-          !text.includes("Part-time") &&
-          !text.includes("City, state") &&
-          !text.includes("Clear search") &&
-          !text.includes("Enter location") &&
-          !text.includes("Search") &&
-          !text.includes("Filter") &&
-          !text.includes("Sort") &&
-          !text.includes("Apply") &&
-          !text.includes("Save") &&
-          !text.includes("Share")
-        ) {
-          location = text;
-          break;
-        }
-      }
+    const locationElement = document.querySelector(
+      ".job-details-jobs-unified-top-card__tertiary-description-container .tvm__text.tvm__text--low-emphasis"
+    );
+    if (locationElement) {
+      location = locationElement.textContent.replace(/<!---->/g, "").trim();
+      console.log("Found location:", location);
     }
 
-    // If we still don't have a location, try to find it in the job details section
-    if (!location) {
-      // Look for the job details section
-      const jobDetailsSection = document.querySelector(".job-details-jobs-unified-top-card");
-      if (jobDetailsSection) {
-        // Look for elements that might contain location information
-        const possibleLocationElements = jobDetailsSection.querySelectorAll("span, div, p");
-        for (const element of possibleLocationElements) {
-          const text = element.textContent.trim();
-          if (
-            text &&
-            !text.includes("Posted") &&
-            !text.includes("Full-time") &&
-            !text.includes("Part-time") &&
-            !text.includes("City, state") &&
-            !text.includes("Clear search") &&
-            !text.includes("Enter location")
-          ) {
-            // Check if the text looks like a location
-            if (text.includes(",") || text.includes("Remote") || text.includes("Hybrid") || text.includes("On-site")) {
-              location = text;
-              console.log("Found location in job details section:", location);
-              break;
-            }
-          }
-        }
+    // Extract job type (Remote, Hybrid, On-site) and employment type (Full-time, Part-time)
+    let jobType = "";
+    let employmentType = "";
+
+    // Look for job type and employment type in the preferences and skills section
+    const preferencePills = document.querySelectorAll(".job-details-preferences-and-skills__pill");
+    preferencePills.forEach((pill) => {
+      const text = pill.textContent.trim();
+      if (text.includes("Remote") || text.includes("Hybrid") || text.includes("On-site")) {
+        jobType = text.replace(/<!---->/g, "").trim();
+        console.log("Found job type:", jobType);
+      } else if (
+        text.includes("Full-time") ||
+        text.includes("Part-time") ||
+        text.includes("Contract") ||
+        text.includes("Temporary")
+      ) {
+        employmentType = text.replace(/<!---->/g, "").trim();
+        console.log("Found employment type:", employmentType);
       }
-    }
-
-    // If we still don't have a location, try to find elements containing location-related text
-    if (!location) {
-      // Look for elements containing location-related text
-      const locationKeywords = ["Location", "Based in", "Remote", "Hybrid", "On-site"];
-      const allElements = document.querySelectorAll("span, div, p, li");
-
-      for (const element of allElements) {
-        const text = element.textContent.trim();
-        if (text) {
-          // Skip placeholder text or search field text
-          if (
-            text.includes("City, state") ||
-            text.includes("Clear search") ||
-            text.includes("Enter location") ||
-            text.includes("Search") ||
-            text.includes("Filter") ||
-            text.includes("Sort") ||
-            text.includes("Apply") ||
-            text.includes("Save") ||
-            text.includes("Share")
-          ) {
-            continue;
-          }
-
-          // Check if the element contains any location keywords
-          const hasKeyword = locationKeywords.some((keyword) => text.includes(keyword));
-          // Check if the text looks like a location (contains commas or is a known location format)
-          const looksLikeLocation =
-            text.includes(",") || text.includes("Remote") || text.includes("Hybrid") || text.includes("On-site");
-
-          if (hasKeyword || looksLikeLocation) {
-            console.log("Found potential location element:", text);
-            // Extract just the location part if it contains a keyword
-            if (hasKeyword) {
-              const parts = text.split(":");
-              if (parts.length > 1) {
-                location = parts[1].trim();
-              } else {
-                location = text;
-              }
-            } else {
-              location = text;
-            }
-            break;
-          }
-        }
-      }
-    }
+    });
 
     // If we still don't have a location, try to find it in the job title or description
     if (!location) {
@@ -153,12 +50,7 @@ function extractJobDetails() {
         const parenthesesMatch = jobTitle.match(/\((.*?)\)/);
         if (parenthesesMatch && parenthesesMatch[1]) {
           const possibleLocation = parenthesesMatch[1].trim();
-          if (
-            possibleLocation.includes(",") ||
-            possibleLocation.includes("Remote") ||
-            possibleLocation.includes("Hybrid") ||
-            possibleLocation.includes("On-site")
-          ) {
+          if (possibleLocation.includes(",")) {
             location = possibleLocation;
             console.log("Found location in job title parentheses:", location);
           }
@@ -169,12 +61,7 @@ function extractJobDetails() {
           const parts = jobTitle.split(" - ");
           if (parts.length > 1) {
             const possibleLocation = parts[parts.length - 1].trim();
-            if (
-              possibleLocation.includes(",") ||
-              possibleLocation.includes("Remote") ||
-              possibleLocation.includes("Hybrid") ||
-              possibleLocation.includes("On-site")
-            ) {
+            if (possibleLocation.includes(",")) {
               location = possibleLocation;
               console.log("Found location in job title after hyphen:", location);
             }
@@ -184,10 +71,9 @@ function extractJobDetails() {
     }
 
     console.log("Final extracted location:", location);
+    console.log("Final extracted job type:", jobType);
+    console.log("Final extracted employment type:", employmentType);
     console.log("Current URL:", window.location.href);
-
-    const jobType = document.querySelector(".job-details-jobs-unified-top-card__job-insight")?.textContent?.trim();
-    const postedDate = document.querySelector(".job-details-jobs-unified-top-card__subtitle-secondary")?.textContent?.trim();
 
     // Company details
     const companySize = document.querySelector(".job-details-jobs-unified-top-card__company-size")?.textContent?.trim();
@@ -209,7 +95,7 @@ function extractJobDetails() {
         // Additional fields
         location: location || "",
         jobType: jobType || "",
-        postedDate: postedDate || "",
+        employmentType: employmentType || "",
         companySize: companySize || "",
         companyIndustry: companyIndustry || "",
         salaryInfo: salaryInfo || "",
@@ -220,7 +106,7 @@ function extractJobDetails() {
           description: jobDescription,
           location,
           jobType,
-          postedDate,
+          employmentType,
           companySize,
           companyIndustry,
           salaryInfo,
