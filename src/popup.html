@@ -26,6 +26,37 @@
             <input type="text" id="location" placeholder="Enter job location" />
           </div>
           <div class="form-group">
+            <label for="job-type">Job Type</label>
+            <select id="job-type">
+              <option value="">Select job type</option>
+              <option value="Remote">Remote</option>
+              <option value="Hybrid">Hybrid</option>
+              <option value="On-site">On-site</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="employment-type">Employment Type</label>
+            <select id="employment-type">
+              <option value="">Select employment type</option>
+              <option value="Full-time">Full-time</option>
+              <option value="Part-time">Part-time</option>
+              <option value="Contract">Contract</option>
+              <option value="Temporary">Temporary</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="company-size">Company Size</label>
+            <input type="text" id="company-size" placeholder="Enter company size" />
+          </div>
+          <div class="form-group">
+            <label for="company-industry">Company Industry</label>
+            <input type="text" id="company-industry" placeholder="Enter company industry" />
+          </div>
+          <div class="form-group">
+            <label for="salary-info">Salary Information</label>
+            <input type="text" id="salary-info" placeholder="Enter salary information" />
+          </div>
+          <div class="form-group">
             <label for="url">Job URL</label>
             <input type="url" id="url" placeholder="Enter job URL" />
           </div>
@@ -38,6 +69,10 @@
               <option value="offer">Offer</option>
               <option value="rejected">Rejected</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" placeholder="Enter any notes about the job application"></textarea>
           </div>
           <button id="save-job" class="button primary">Save Job</button>
         </div>

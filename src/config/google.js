@@ -23,7 +23,7 @@ export const GOOGLE_CONFIG = {
     "Status",
     "Location",
     "Job Type",
-    "Posted Date",
+    "Employment Type",
     "Company Size",
     "Company Industry",
     "Salary Info",

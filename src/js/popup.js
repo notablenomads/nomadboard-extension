@@ -4,32 +4,32 @@ const UI_ELEMENTS = {
   JOB_FORM: "job-form",
   RECENT_JOBS: "recent-jobs",
   LOGIN_BUTTON: "login-button",
-  SAVE_JOB_FORM: "save-job-form",
+  SAVE_JOB_BUTTON: "save-job",
   JOBS_LIST: "jobs-list",
-  COMPANY: "company",
-  POSITION: "position",
-  STATUS: "status",
-  NOTES: "notes",
+  JOB_TITLE: "job-title",
+  COMPANY_NAME: "company-name",
   LOCATION: "location",
   JOB_TYPE: "job-type",
-  POSTED_DATE: "posted-date",
+  EMPLOYMENT_TYPE: "employment-type",
   COMPANY_SIZE: "company-size",
   COMPANY_INDUSTRY: "company-industry",
   SALARY_INFO: "salary-info",
   URL: "url",
+  JOB_STATUS: "job-status",
+  NOTES: "notes",
 };
 
 const JOB_STATUS = {
+  WISHLIST: "wishlist",
   APPLIED: "applied",
-  INTERVIEWING: "interviewing",
+  INTERVIEW: "interview",
   OFFER: "offer",
   REJECTED: "rejected",
-  ACCEPTED: "accepted",
 };
 
 // Helper functions
 function validateJobData(jobData) {
-  return jobData.company && jobData.position && jobData.status;
+  return jobData.position && jobData.company && jobData.status;
 }
 
 function createJobElement(job) {
@@ -42,6 +42,16 @@ function createJobElement(job) {
   const position = document.createElement("p");
   position.textContent = job.position;
 
+  const location = document.createElement("p");
+  location.className = "job-location";
+  location.textContent = job.location || "Location not specified";
+
+  const jobType = document.createElement("p");
+  jobType.className = "job-type";
+  jobType.textContent = job.jobType
+    ? `${job.jobType}${job.employmentType ? ` - ${job.employmentType}` : ""}`
+    : "Job type not specified";
+
   const status = document.createElement("span");
   status.className = `status-badge status-${job.status.toLowerCase()}`;
   status.textContent = job.status;
@@ -52,6 +62,8 @@ function createJobElement(job) {
 
   div.appendChild(company);
   div.appendChild(position);
+  div.appendChild(location);
+  div.appendChild(jobType);
   div.appendChild(status);
   div.appendChild(date);
 
@@ -70,16 +82,10 @@ function hideElement(element) {
   }
 }
 
-function clearForm(form) {
+function clearForm() {
+  const form = document.querySelector(".job-form");
   if (form) {
     form.reset();
-    // Explicitly clear the new fields in case they're not properly reset
-    const elements = {
-      location: document.getElementById(UI_ELEMENTS.LOCATION),
-      url: document.getElementById(UI_ELEMENTS.URL),
-    };
-    if (elements.location) elements.location.value = "";
-    if (elements.url) elements.url.value = "";
   }
 }
 
@@ -91,27 +97,27 @@ document.addEventListener("DOMContentLoaded", function () {
     jobForm: document.getElementById(UI_ELEMENTS.JOB_FORM),
     recentJobs: document.getElementById(UI_ELEMENTS.RECENT_JOBS),
     loginButton: document.getElementById(UI_ELEMENTS.LOGIN_BUTTON),
-    saveJobForm: document.getElementById(UI_ELEMENTS.SAVE_JOB_FORM),
+    saveJobButton: document.getElementById(UI_ELEMENTS.SAVE_JOB_BUTTON),
     jobsList: document.getElementById(UI_ELEMENTS.JOBS_LIST),
-    company: document.getElementById(UI_ELEMENTS.COMPANY),
-    position: document.getElementById(UI_ELEMENTS.POSITION),
-    status: document.getElementById(UI_ELEMENTS.STATUS),
-    notes: document.getElementById(UI_ELEMENTS.NOTES),
+    jobTitle: document.getElementById(UI_ELEMENTS.JOB_TITLE),
+    companyName: document.getElementById(UI_ELEMENTS.COMPANY_NAME),
     location: document.getElementById(UI_ELEMENTS.LOCATION),
     jobType: document.getElementById(UI_ELEMENTS.JOB_TYPE),
-    postedDate: document.getElementById(UI_ELEMENTS.POSTED_DATE),
+    employmentType: document.getElementById(UI_ELEMENTS.EMPLOYMENT_TYPE),
     companySize: document.getElementById(UI_ELEMENTS.COMPANY_SIZE),
     companyIndustry: document.getElementById(UI_ELEMENTS.COMPANY_INDUSTRY),
     salaryInfo: document.getElementById(UI_ELEMENTS.SALARY_INFO),
     url: document.getElementById(UI_ELEMENTS.URL),
+    jobStatus: document.getElementById(UI_ELEMENTS.JOB_STATUS),
+    notes: document.getElementById(UI_ELEMENTS.NOTES),
   };
 
-  // Check login status
-  chrome.storage.local.get(["isLoggedIn"], function (result) {
-    if (result.isLoggedIn) {
+  // Check if user is logged in
+  chrome.storage.local.get(["token"], function (result) {
+    if (result.token) {
+      hideElement(elements.loginSection);
       showElement(elements.jobForm);
       showElement(elements.recentJobs);
-      hideElement(elements.loginSection);
       loadRecentJobs();
     } else {
       showElement(elements.loginSection);
@@ -120,65 +126,58 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Handle login
-  if (elements.loginButton) {
-    elements.loginButton.addEventListener("click", function () {
-      chrome.runtime.sendMessage({ action: "login" }, function (response) {
+  // Handle login button click
+  elements.loginButton.addEventListener("click", function () {
+    chrome.runtime.sendMessage({ action: "login" }, function (response) {
+      if (response.success) {
+        hideElement(elements.loginSection);
+        showElement(elements.jobForm);
+        showElement(elements.recentJobs);
+        loadRecentJobs();
+      }
+    });
+  });
+
+  // Handle save job button click
+  elements.saveJobButton.addEventListener("click", function () {
+    const jobData = {
+      position: elements.jobTitle.value,
+      company: elements.companyName.value,
+      location: elements.location.value,
+      jobType: elements.jobType.value,
+      employmentType: elements.employmentType.value,
+      companySize: elements.companySize.value,
+      companyIndustry: elements.companyIndustry.value,
+      salaryInfo: elements.salaryInfo.value,
+      url: elements.url.value,
+      status: elements.jobStatus.value,
+      notes: elements.notes.value,
+      date: new Date().toISOString(),
+    };
+
+    if (validateJobData(jobData)) {
+      chrome.runtime.sendMessage({ action: "saveJob", jobData: jobData }, function (response) {
         if (response.success) {
-          showElement(elements.jobForm);
-          showElement(elements.recentJobs);
-          hideElement(elements.loginSection);
+          clearForm();
           loadRecentJobs();
+        } else {
+          console.error("Failed to save job:", response.error);
         }
       });
-    });
-  }
+    } else {
+      console.error("Invalid job data");
+    }
+  });
 
-  // Handle job save
-  if (elements.saveJobForm) {
-    elements.saveJobForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-
-      const jobData = {
-        company: elements.company.value,
-        position: elements.position.value,
-        status: elements.status.value,
-        location: elements.location?.value || "",
-        jobType: elements.jobType?.value || "",
-        postedDate: elements.postedDate?.value || "",
-        companySize: elements.companySize?.value || "",
-        companyIndustry: elements.companyIndustry?.value || "",
-        salaryInfo: elements.salaryInfo?.value || "",
-        url: elements.url?.value || "",
-        notes: elements.notes.value,
-        date: new Date().toISOString(),
-      };
-
-      console.log("Saving job data:", jobData);
-
-      if (validateJobData(jobData)) {
-        chrome.runtime.sendMessage({ action: "saveJob", jobData: jobData }, function (response) {
-          if (response.success) {
-            clearForm(elements.saveJobForm);
-            loadRecentJobs();
-          }
+  // Load recent jobs
+  function loadRecentJobs() {
+    chrome.runtime.sendMessage({ action: "getRecentJobs" }, function (response) {
+      if (response.success && response.jobs) {
+        elements.jobsList.innerHTML = "";
+        response.jobs.forEach((job) => {
+          elements.jobsList.appendChild(createJobElement(job));
         });
       }
     });
   }
 });
-
-// Load recent jobs
-function loadRecentJobs() {
-  chrome.runtime.sendMessage({ action: "getRecentJobs" }, function (response) {
-    if (response.success && response.jobs) {
-      const jobsList = document.getElementById(UI_ELEMENTS.JOBS_LIST);
-      if (jobsList) {
-        jobsList.innerHTML = "";
-        response.jobs.forEach((job) => {
-          jobsList.appendChild(createJobElement(job));
-        });
-      }
-    }
-  });
-}

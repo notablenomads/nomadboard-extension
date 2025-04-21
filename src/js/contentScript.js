@@ -20,27 +20,29 @@ function extractJobDetails() {
       console.log("Found location:", location);
     }
 
-    // Extract job type (Remote, Hybrid, On-site) and employment type (Full-time, Part-time)
+    // Extract job type
+    const jobTypeElement = document.querySelector(".job-details-jobs-unified-top-card__job-insight");
     let jobType = "";
-    let employmentType = "";
-
-    // Look for job type and employment type in the preferences and skills section
-    const preferencePills = document.querySelectorAll(".job-details-preferences-and-skills__pill");
-    preferencePills.forEach((pill) => {
-      const text = pill.textContent.trim();
-      if (text.includes("Remote") || text.includes("Hybrid") || text.includes("On-site")) {
-        jobType = text.replace(/<!---->/g, "").trim();
-        console.log("Found job type:", jobType);
-      } else if (
-        text.includes("Full-time") ||
-        text.includes("Part-time") ||
-        text.includes("Contract") ||
-        text.includes("Temporary")
-      ) {
-        employmentType = text.replace(/<!---->/g, "").trim();
-        console.log("Found employment type:", employmentType);
+    if (jobTypeElement) {
+      const jobTypeText = jobTypeElement.textContent.trim();
+      // Extract just the job type (Remote, Hybrid, or On-site)
+      if (jobTypeText.includes("Remote")) {
+        jobType = "Remote";
+      } else if (jobTypeText.includes("Hybrid")) {
+        jobType = "Hybrid";
+      } else if (jobTypeText.includes("On-site")) {
+        jobType = "On-site";
       }
-    });
+    }
+    console.log("Extracted job type:", jobType);
+
+    // Extract employment type (Full-time, Part-time)
+    let employmentType = "";
+    const employmentTypeElement = document.querySelector(".job-details-jobs-unified-top-card__employment-type");
+    if (employmentTypeElement) {
+      employmentType = employmentTypeElement.textContent.replace(/<!---->/g, "").trim();
+      console.log("Found employment type:", employmentType);
+    }
 
     // If we still don't have a location, try to find it in the job title or description
     if (!location) {

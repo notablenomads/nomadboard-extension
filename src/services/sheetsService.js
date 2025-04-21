@@ -3,7 +3,15 @@
  * @property {string} position - Job position/title
  * @property {string} company - Company name
  * @property {string} status - Application status
- * @property {string} [notes] - Optional notes about the application
+ * @property {string} location - Job location
+ * @property {string} jobType - Job type (Remote, Hybrid, On-site)
+ * @property {string} employmentType - Employment type (Full-time, Part-time, Contract, Temporary)
+ * @property {string} companySize - Company size
+ * @property {string} companyIndustry - Company industry
+ * @property {string} salaryInfo - Salary information
+ * @property {string} url - Job URL
+ * @property {string} notes - Optional notes about the application
+ * @property {string} date - Date when the job was added
  */
 
 import { API_CONFIG, GOOGLE_CONFIG } from "../config/google.js";
@@ -99,36 +107,36 @@ class SheetsService {
     const createData = await createResponse.json();
     console.log("Create response:", createData);
 
-    if (!createData.spreadsheetId) {
-      throw new Error("No spreadsheet ID in response");
-    }
-
-    await this.addHeaders(token, createData.spreadsheetId);
     return createData.spreadsheetId;
   }
 
   /**
-   * Adds headers to a new sheet
+   * Adds headers to the sheet
    * @param {string} token - OAuth token
    * @param {string} sheetId - Sheet ID
+   * @returns {Promise<boolean>} Success status
    */
   async addHeaders(token, sheetId) {
-    console.log("Adding headers to new sheet...");
-    const headerResponse = await fetch(
-      `${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}/values/A1:E1?valueInputOption=${API_CONFIG.VALUE_INPUT_OPTION}`,
-      {
-        method: "PUT",
-        headers: createHeaders(token),
-        body: JSON.stringify({
-          range: "A1:E1",
-          majorDimension: "ROWS",
-          values: [GOOGLE_CONFIG.HEADERS],
-        }),
-      }
-    );
+    try {
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}/values/A1:L1?valueInputOption=${API_CONFIG.VALUE_INPUT_OPTION}`,
+        {
+          method: "PUT",
+          headers: createHeaders(token),
+          body: JSON.stringify({
+            values: [GOOGLE_CONFIG.HEADERS],
+          }),
+        }
+      );
 
-    if (!headerResponse.ok) {
-      await handleApiError(headerResponse, "Add headers");
+      if (!response.ok) {
+        await handleApiError(response, "Add headers");
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error adding headers:", error);
+      return false;
     }
   }
 
@@ -137,45 +145,110 @@ class SheetsService {
    * @param {string} token - OAuth token
    * @param {string} sheetId - Sheet ID
    * @param {JobData} jobData - Job data to append
+   * @returns {Promise<boolean>} Success status
    */
   async appendJobData(token, sheetId, jobData) {
-    console.log("Received job data for sheet:", jobData);
+    try {
+      // Format the date
+      const date = new Date(jobData.date);
+      const formattedDate = date.toLocaleDateString();
 
-    const values = [
-      [
-        new Date().toISOString(),
-        jobData.position,
-        jobData.company,
-        jobData.status,
+      // Prepare the row data in the same order as the headers
+      const rowData = [
+        formattedDate,
+        jobData.position || "",
+        jobData.company || "",
+        jobData.status || "",
         jobData.location || "",
         jobData.jobType || "",
-        jobData.postedDate || "",
+        jobData.employmentType || "",
         jobData.companySize || "",
         jobData.companyIndustry || "",
         jobData.salaryInfo || "",
         jobData.url || "",
         jobData.notes || "",
-      ],
-    ];
-    console.log("Formatted values for sheet:", values);
+      ];
 
-    const appendResponse = await fetch(
-      `${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}/values/A:L:append?valueInputOption=${API_CONFIG.VALUE_INPUT_OPTION}&insertDataOption=${API_CONFIG.INSERT_DATA_OPTION}`,
-      {
-        method: "POST",
-        headers: createHeaders(token),
-        body: JSON.stringify({
-          range: "A:L",
-          majorDimension: "ROWS",
-          values: values,
-        }),
+      const response = await fetch(
+        `${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}/values/A:L:append?valueInputOption=${API_CONFIG.VALUE_INPUT_OPTION}&insertDataOption=${API_CONFIG.INSERT_DATA_OPTION}`,
+        {
+          method: "POST",
+          headers: createHeaders(token),
+          body: JSON.stringify({
+            values: [rowData],
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        await handleApiError(response, "Append job data");
       }
-    );
 
-    if (!appendResponse.ok) {
-      await handleApiError(appendResponse, "Append data");
+      return true;
+    } catch (error) {
+      console.error("Error appending job data:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Gets recent jobs from the sheet
+   * @param {string} token - OAuth token
+   * @param {string} sheetId - Sheet ID
+   * @param {number} limit - Maximum number of jobs to retrieve
+   * @returns {Promise<JobData[]>} Array of job data
+   */
+  async getRecentJobs(token, sheetId, limit = 10) {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}/values/A2:L${limit + 1}`, {
+        headers: createHeaders(token),
+      });
+
+      if (!response.ok) {
+        await handleApiError(response, "Get recent jobs");
+      }
+
+      const data = await response.json();
+      if (!data.values || data.values.length === 0) {
+        return [];
+      }
+
+      // Convert the row data to JobData objects
+      return data.values.map((row) => {
+        const [
+          date,
+          position,
+          company,
+          status,
+          location,
+          jobType,
+          employmentType,
+          companySize,
+          companyIndustry,
+          salaryInfo,
+          url,
+          notes,
+        ] = row;
+        return {
+          date,
+          position,
+          company,
+          status,
+          location,
+          jobType,
+          employmentType,
+          companySize,
+          companyIndustry,
+          salaryInfo,
+          url,
+          notes,
+        };
+      });
+    } catch (error) {
+      console.error("Error getting recent jobs:", error);
+      return [];
     }
   }
 }
 
-export const sheetsService = new SheetsService();
+export default new SheetsService();
