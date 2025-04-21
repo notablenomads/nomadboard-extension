@@ -179,7 +179,7 @@ async function createOrGetSheet(token) {
     // Add headers
     console.log("Adding headers to new sheet...");
     const headerResponse = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${createData.spreadsheetId}/values/A1:E1`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${createData.spreadsheetId}/values/A1:E1?valueInputOption=RAW`,
       {
         method: "PUT",
         headers: {
@@ -235,41 +235,21 @@ async function saveJob(jobData, sendResponse) {
       return;
     }
 
-    console.log("Getting next empty row...");
-    // Get the next empty row
-    const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A:A`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Get next row error:", errorText);
-      throw new Error(`Failed to get next row: ${response.statusText}. Response: ${errorText}`);
-    }
-
-    const data = await response.json();
-    const nextRow = data.values ? data.values.length + 1 : 2;
-    console.log("Next row:", nextRow);
-
-    // Add the job data
+    // Add the job data using append endpoint
     const values = [[new Date().toISOString(), jobData.position, jobData.company, jobData.status, jobData.notes || ""]];
     console.log("Adding job data:", values);
 
     const appendResponse = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A${nextRow}:E${nextRow}`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/A:E:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
       {
-        method: "PUT",
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
           Accept: "application/json",
         },
         body: JSON.stringify({
-          range: `A${nextRow}:E${nextRow}`,
+          range: "A:E",
           majorDimension: "ROWS",
           values: values,
         }),
