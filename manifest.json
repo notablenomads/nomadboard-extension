@@ -3,28 +3,34 @@
   "name": "NomadBoard",
   "version": "1.0.0",
   "description": "Track your job applications efficiently with Google Sheets integration",
-  "permissions": ["activeTab", "storage", "identity", "identity.email"],
-  "host_permissions": ["https://sheets.googleapis.com/*", "https://www.googleapis.com/drive/*"],
+  "permissions": ["activeTab", "storage", "identity", "identity.email", "scripting"],
+  "host_permissions": ["https://sheets.googleapis.com/*", "https://www.googleapis.com/drive/*", "https://*.linkedin.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://*.linkedin.com/jobs/*"],
+      "js": ["dist/assets/contentScript.js"]
+    }
+  ],
   "action": {
-    "default_popup": "src/popup/popup.html",
+    "default_popup": "dist/src/popup/popup.html",
     "default_icon": {
-      "16": "src/assets/icons/icon16.png",
-      "48": "src/assets/icons/icon48.png",
-      "128": "src/assets/icons/icon128.png"
+      "16": "dist/assets/icon16.png",
+      "48": "dist/assets/icon48.png",
+      "128": "dist/assets/icon128.png"
     }
   },
   "icons": {
-    "16": "src/assets/icons/icon16.png",
-    "48": "src/assets/icons/icon48.png",
-    "128": "src/assets/icons/icon128.png"
+    "16": "dist/assets/icon16.png",
+    "48": "dist/assets/icon48.png",
+    "128": "dist/assets/icon128.png"
   },
   "background": {
-    "service_worker": "src/js/background.js",
+    "service_worker": "dist/assets/background.js",
     "type": "module"
   },
   "web_accessible_resources": [
     {
-      "resources": ["src/config/*", "src/services/*", "src/utils/*", "src/js/*"],
+      "resources": ["dist/*"],
       "matches": ["<all_urls>"]
     }
   ],
