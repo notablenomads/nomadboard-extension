@@ -6,11 +6,12 @@ export const SHEET_CONFIG = {
 };
 
 export const JOB_STATUS = {
-  APPLIED: "applied",
-  INTERVIEWING: "interviewing",
-  OFFER: "offer",
-  REJECTED: "rejected",
-  ACCEPTED: "accepted",
+  APPLIED: "Applied",
+  INTERVIEWING: "Interviewing",
+  OFFER: "Offer",
+  REJECTED: "Rejected",
+  ACCEPTED: "Accepted",
+  OTHER: "Other",
 };
 
 export const STORAGE_KEYS = {
@@ -34,4 +35,10 @@ export const UI_ELEMENTS = {
   JOB_TITLE: "job-title",
   COMPANY_NAME: "company-name",
   JOB_STATUS: "job-status",
+};
+
+export const UI = {
+  MAX_TITLE_LENGTH: 50,
+  MAX_COMPANY_LENGTH: 30,
+  MAX_NOTES_LENGTH: 200,
 };

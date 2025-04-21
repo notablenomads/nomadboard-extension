@@ -19,11 +19,12 @@
     "128": "src/assets/icons/icon128.png"
   },
   "background": {
-    "service_worker": "src/js/background.js"
+    "service_worker": "src/js/background.js",
+    "type": "module"
   },
   "web_accessible_resources": [
     {
-      "resources": ["src/config/*"],
+      "resources": ["src/config/*", "src/services/*", "src/utils/*", "src/js/*"],
       "matches": ["<all_urls>"]
     }
   ],

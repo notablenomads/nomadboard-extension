@@ -1,37 +1,67 @@
-// Storage service for managing local storage operations
-const STORAGE_KEYS = {
-  IS_LOGGED_IN: "isLoggedIn",
-  SHEET_ID: "sheetId",
-  RECENT_JOBS: "recentJobs",
-  MAX_RECENT_JOBS: 10,
-};
+import { STORAGE_KEYS } from "../js/constants.js";
 
+/**
+ * Service for handling Chrome storage operations
+ */
 class StorageService {
+  /**
+   * Gets the login status
+   * @returns {Promise<boolean>} Login status
+   */
   async getLoginStatus() {
-    const result = await chrome.storage.local.get([STORAGE_KEYS.IS_LOGGED_IN]);
-    return result[STORAGE_KEYS.IS_LOGGED_IN] || false;
+    const { [STORAGE_KEYS.IS_LOGGED_IN]: isLoggedIn = false } = await chrome.storage.local.get([STORAGE_KEYS.IS_LOGGED_IN]);
+    return isLoggedIn;
   }
 
+  /**
+   * Sets the login status
+   * @param {boolean} isLoggedIn - Login status
+   */
+  async setLoginStatus(isLoggedIn) {
+    await chrome.storage.local.set({ [STORAGE_KEYS.IS_LOGGED_IN]: isLoggedIn });
+  }
+
+  /**
+   * Gets the sheet ID
+   * @returns {Promise<string|null>} Sheet ID or null if not found
+   */
   async getSheetId() {
-    const result = await chrome.storage.local.get([STORAGE_KEYS.SHEET_ID]);
-    return result[STORAGE_KEYS.SHEET_ID];
+    const { [STORAGE_KEYS.SHEET_ID]: sheetId } = await chrome.storage.local.get([STORAGE_KEYS.SHEET_ID]);
+    return sheetId || null;
   }
 
-  async setMultiple(data) {
-    await chrome.storage.local.set(data);
+  /**
+   * Sets the sheet ID
+   * @param {string} sheetId - Sheet ID
+   */
+  async setSheetId(sheetId) {
+    await chrome.storage.local.set({ [STORAGE_KEYS.SHEET_ID]: sheetId });
   }
 
+  /**
+   * Gets recent jobs
+   * @returns {Promise<Array>} Recent jobs
+   */
   async getRecentJobs() {
-    const result = await chrome.storage.local.get([STORAGE_KEYS.RECENT_JOBS]);
-    return result[STORAGE_KEYS.RECENT_JOBS] || [];
+    const { [STORAGE_KEYS.RECENT_JOBS]: recentJobs = [] } = await chrome.storage.local.get([STORAGE_KEYS.RECENT_JOBS]);
+    return recentJobs;
   }
 
-  async addRecentJob(jobData) {
-    const jobs = await this.getRecentJobs();
-    jobs.unshift(jobData);
-    await chrome.storage.local.set({
-      [STORAGE_KEYS.RECENT_JOBS]: jobs.slice(0, STORAGE_KEYS.MAX_RECENT_JOBS),
-    });
+  /**
+   * Updates recent jobs
+   * @param {Object} jobData - New job data
+   */
+  async updateRecentJobs(jobData) {
+    const recentJobs = await this.getRecentJobs();
+    const updatedJobs = [jobData, ...recentJobs.slice(0, STORAGE_KEYS.MAX_RECENT_JOBS - 1)];
+    await chrome.storage.local.set({ [STORAGE_KEYS.RECENT_JOBS]: updatedJobs });
+  }
+
+  /**
+   * Clears all storage data
+   */
+  async clearAll() {
+    await chrome.storage.local.clear();
   }
 }
 
