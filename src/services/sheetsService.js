@@ -139,16 +139,33 @@ class SheetsService {
    * @param {JobData} jobData - Job data to append
    */
   async appendJobData(token, sheetId, jobData) {
-    const values = [[new Date().toISOString(), jobData.position, jobData.company, jobData.status, jobData.notes || ""]];
-    console.log("Adding job data:", values);
+    console.log("Received job data for sheet:", jobData);
+
+    const values = [
+      [
+        new Date().toISOString(),
+        jobData.position,
+        jobData.company,
+        jobData.status,
+        jobData.location || "",
+        jobData.jobType || "",
+        jobData.postedDate || "",
+        jobData.companySize || "",
+        jobData.companyIndustry || "",
+        jobData.salaryInfo || "",
+        jobData.url || "",
+        jobData.notes || "",
+      ],
+    ];
+    console.log("Formatted values for sheet:", values);
 
     const appendResponse = await fetch(
-      `${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}/values/A:E:append?valueInputOption=${API_CONFIG.VALUE_INPUT_OPTION}&insertDataOption=${API_CONFIG.INSERT_DATA_OPTION}`,
+      `${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}/values/A:L:append?valueInputOption=${API_CONFIG.VALUE_INPUT_OPTION}&insertDataOption=${API_CONFIG.INSERT_DATA_OPTION}`,
       {
         method: "POST",
         headers: createHeaders(token),
         body: JSON.stringify({
-          range: "A:E",
+          range: "A:L",
           majorDimension: "ROWS",
           values: values,
         }),

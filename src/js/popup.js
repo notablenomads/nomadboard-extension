@@ -10,6 +10,13 @@ const UI_ELEMENTS = {
   POSITION: "position",
   STATUS: "status",
   NOTES: "notes",
+  LOCATION: "location",
+  JOB_TYPE: "job-type",
+  POSTED_DATE: "posted-date",
+  COMPANY_SIZE: "company-size",
+  COMPANY_INDUSTRY: "company-industry",
+  SALARY_INFO: "salary-info",
+  URL: "url",
 };
 
 const JOB_STATUS = {
@@ -66,6 +73,13 @@ function hideElement(element) {
 function clearForm(form) {
   if (form) {
     form.reset();
+    // Explicitly clear the new fields in case they're not properly reset
+    const elements = {
+      location: document.getElementById(UI_ELEMENTS.LOCATION),
+      url: document.getElementById(UI_ELEMENTS.URL),
+    };
+    if (elements.location) elements.location.value = "";
+    if (elements.url) elements.url.value = "";
   }
 }
 
@@ -83,6 +97,13 @@ document.addEventListener("DOMContentLoaded", function () {
     position: document.getElementById(UI_ELEMENTS.POSITION),
     status: document.getElementById(UI_ELEMENTS.STATUS),
     notes: document.getElementById(UI_ELEMENTS.NOTES),
+    location: document.getElementById(UI_ELEMENTS.LOCATION),
+    jobType: document.getElementById(UI_ELEMENTS.JOB_TYPE),
+    postedDate: document.getElementById(UI_ELEMENTS.POSTED_DATE),
+    companySize: document.getElementById(UI_ELEMENTS.COMPANY_SIZE),
+    companyIndustry: document.getElementById(UI_ELEMENTS.COMPANY_INDUSTRY),
+    salaryInfo: document.getElementById(UI_ELEMENTS.SALARY_INFO),
+    url: document.getElementById(UI_ELEMENTS.URL),
   };
 
   // Check login status
@@ -122,9 +143,18 @@ document.addEventListener("DOMContentLoaded", function () {
         company: elements.company.value,
         position: elements.position.value,
         status: elements.status.value,
+        location: elements.location?.value || "",
+        jobType: elements.jobType?.value || "",
+        postedDate: elements.postedDate?.value || "",
+        companySize: elements.companySize?.value || "",
+        companyIndustry: elements.companyIndustry?.value || "",
+        salaryInfo: elements.salaryInfo?.value || "",
+        url: elements.url?.value || "",
         notes: elements.notes.value,
         date: new Date().toISOString(),
       };
+
+      console.log("Saving job data:", jobData);
 
       if (validateJobData(jobData)) {
         chrome.runtime.sendMessage({ action: "saveJob", jobData: jobData }, function (response) {

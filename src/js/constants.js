@@ -1,8 +1,21 @@
 export const SHEET_CONFIG = {
   NAME: "NomadBoard Job Applications",
-  HEADERS: ["Date", "Job Title", "Company", "Status", "URL"],
+  HEADERS: [
+    "Date",
+    "Job Title",
+    "Company",
+    "Status",
+    "Location",
+    "Job Type",
+    "Posted Date",
+    "Company Size",
+    "Company Industry",
+    "Salary Info",
+    "URL",
+    "Notes",
+  ],
   MAX_ROWS: 1000,
-  COLUMNS: 5,
+  COLUMNS: 12,
 };
 
 export const JOB_STATUS = {
