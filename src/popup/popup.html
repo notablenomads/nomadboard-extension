@@ -2,55 +2,11 @@
 <html>
   <head>
     <title>NomadBoard</title>
-    <link rel="stylesheet" href="../css/styles.css" />
     <meta charset="UTF-8" />
+    <link rel="stylesheet" href="../styles/globals.css" />
   </head>
   <body>
-    <div class="container">
-      <header>
-        <h1>NomadBoard</h1>
-        <div id="login-status"></div>
-      </header>
-
-      <main>
-        <div id="login-section">
-          <button id="login-button" class="btn primary">Login with Google</button>
-        </div>
-
-        <div id="job-form" style="display: none">
-          <form id="save-job-form">
-            <div class="form-group">
-              <label for="company">Company</label>
-              <input type="text" id="company" name="company" required />
-            </div>
-            <div class="form-group">
-              <label for="position">Position</label>
-              <input type="text" id="position" name="position" required />
-            </div>
-            <div class="form-group">
-              <label for="status">Status</label>
-              <select id="status" name="status" required>
-                <option value="Applied">Applied</option>
-                <option value="Interviewing">Interviewing</option>
-                <option value="Offered">Offered</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Accepted">Accepted</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="notes">Notes</label>
-              <textarea id="notes" name="notes" rows="3"></textarea>
-            </div>
-            <button type="submit" class="btn primary">Save Job</button>
-          </form>
-        </div>
-
-        <div id="recent-jobs" style="display: none">
-          <h2>Recent Jobs</h2>
-          <div id="jobs-list"></div>
-        </div>
-      </main>
-    </div>
-    <script src="../js/popup.js"></script>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
