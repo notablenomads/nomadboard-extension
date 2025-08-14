@@ -1,25 +1,9 @@
-/**
- * @typedef {Object} JobData
- * @property {string} position - Job position/title
- * @property {string} company - Company name
- * @property {string} status - Application status
- * @property {string} [notes] - Optional notes about the application
- */
+import { API_CONFIG, GOOGLE_CONFIG } from '../config/constants';
+import { JobData } from '../types';
+import { createHeaders, handleApiError } from '../utils/api';
 
-import { API_CONFIG, GOOGLE_CONFIG } from "../config/google.js";
-import { STORAGE_KEYS } from "../js/constants.js";
-import { handleApiError, createHeaders } from "../utils/helpers.js";
-
-/**
- * Service for handling Google Sheets operations
- */
-class SheetsService {
-  /**
-   * Creates or retrieves a Google Sheet
-   * @param {string} token - OAuth token
-   * @returns {Promise<string|null>} Sheet ID or null if failed
-   */
-  async createOrGetSheet(token) {
+export class SheetsService {
+  async createOrGetSheet(token: string): Promise<string | null> {
     try {
       console.log("Searching for existing sheet...");
       const sheetId = await this.findExistingSheet(token);
@@ -34,12 +18,7 @@ class SheetsService {
     }
   }
 
-  /**
-   * Finds an existing Google Sheet
-   * @param {string} token - OAuth token
-   * @returns {Promise<string|null>} Sheet ID or null if not found
-   */
-  async findExistingSheet(token) {
+  async findExistingSheet(token: string): Promise<string | null> {
     const searchResponse = await fetch(
       `${API_CONFIG.DRIVE_URL}/files?q=name%3D'${encodeURIComponent(
         GOOGLE_CONFIG.SHEET_NAME
@@ -64,12 +43,7 @@ class SheetsService {
     return null;
   }
 
-  /**
-   * Creates a new Google Sheet
-   * @param {string} token - OAuth token
-   * @returns {Promise<string|null>} Sheet ID or null if failed
-   */
-  async createNewSheet(token) {
+  async createNewSheet(token: string): Promise<string> {
     console.log("No existing sheet found, creating new one...");
     const createResponse = await fetch(`${API_CONFIG.BASE_URL}/spreadsheets`, {
       method: "POST",
@@ -107,12 +81,7 @@ class SheetsService {
     return createData.spreadsheetId;
   }
 
-  /**
-   * Adds headers to a new sheet
-   * @param {string} token - OAuth token
-   * @param {string} sheetId - Sheet ID
-   */
-  async addHeaders(token, sheetId) {
+  async addHeaders(token: string, sheetId: string): Promise<void> {
     console.log("Adding headers to new sheet...");
     const headerResponse = await fetch(
       `${API_CONFIG.BASE_URL}/spreadsheets/${sheetId}/values/A1:E1?valueInputOption=${API_CONFIG.VALUE_INPUT_OPTION}`,
@@ -132,14 +101,14 @@ class SheetsService {
     }
   }
 
-  /**
-   * Appends job data to the sheet
-   * @param {string} token - OAuth token
-   * @param {string} sheetId - Sheet ID
-   * @param {JobData} jobData - Job data to append
-   */
-  async appendJobData(token, sheetId, jobData) {
-    const values = [[new Date().toISOString(), jobData.position, jobData.company, jobData.status, jobData.notes || ""]];
+  async appendJobData(token: string, sheetId: string, jobData: JobData): Promise<void> {
+    const values = [[
+      new Date().toISOString(), 
+      jobData.position, 
+      jobData.company, 
+      jobData.status, 
+      jobData.notes || ""
+    ]];
     console.log("Adding job data:", values);
 
     const appendResponse = await fetch(

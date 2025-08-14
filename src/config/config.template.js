@@ -1,5 +1,3 @@
-// Template configuration file
-// Copy this file to config.js and fill in your actual values
 export const CONFIG = {
   GOOGLE: {
     CLIENT_ID: "YOUR_CLIENT_ID",
